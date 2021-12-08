@@ -1,0 +1,360 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("rtweet")
+```
+
+```{r}
+library(rtweet)
+```
+
+```{r}
+infl <- search_tweets("inflation", n = 10000, include_rts = FALSE)
+```
+
+```{r}
+library(utils)
+library(tidyverse)
+#Write tables
+write_csv(rt,"infl.csv", append = TRUE)
+```
+
+```{r}
+install.packages("tm")
+install.packages("quanteda")
+```
+
+```{r}
+library(tidyverse)
+library(jsonlite) #bc is a json file
+library(stringr) #part of tidyverse. String operations, allows you to work with txt easier
+library(tm)
+library(quanteda)
+```
+
+```{r}
+library(readr)
+infl <- read_csv("infl.csv")
+View(infl)
+```
+
+```{r}
+inflationCount <- sum(str_detect(infl1$text,"inflation"))
+cat("Number of tweets with 'inflation':",inflationCount,"\n") #\n is to have a different line below with another output.
+
+#it's not the times he sayed inflation, but the number of tweets that contain the word inflation.
+```
+
+```{r}
+InflationCount <- sum(str_detect(infl1$text,"Inflation"))
+cat("Number of tweets with 'Inflation':",InflationCount,"\n")
+
+#it's not the times he sayed Inflation, but the number of tweets that contain the word Inflation.
+```
+
+```{r}
+inflationOrInflation <- sum(str_detect(infl1$text,"inflation|Inflation"))
+cat("Number of tweets with 'inflation' or 'Inflation':",inflationOrInflation)
+```
+
+```{r}
+allInflation <- sum(str_detect(infl1$text,regex("inflation",ignore_case = TRUE))) #regex means Regular Expression
+cat("Tweets that mention inflation:",allInflation,"\n")
+```
+
+How many hashtags?
+```{r}
+sum(str_detect(infl1$text,"#"))
+```
+
+How many times were the tweets mentioning someone?
+```{r}
+sum(str_detect(infl1$text,"@"))
+```
+
+```{r}
+#You need to use VectorSource before using Corpus
+inflCorpus <- Corpus(VectorSource(infl$text))
+class(inflCorpus)
+
+#Term Document Matrix
+inflTDM <- TermDocumentMatrix(inflCorpus)
+
+inspect(inflTDM)
+```
+
+```{r}
+tweetDFM <- dfm(infl1$text, remove_punct = TRUE, remove = stopwords("english"))
+#Warnings are not as bad as errors - just warnings.
+```
+
+```{r}
+topfeatures(tweetDFM)
+```
+
+```{r}
+#tokens transforms each tuit - it needs to be used along with DFM
+topic <- "inflation"
+
+tweetDFM1 <- dfm(tokens(infl1$text, remove_punct = TRUE, remove_symbols = TRUE)) %>%
+  dfm_remove(c(topic,stopwords("english")))
+```
+
+```{r}
+topfeatures(tweetDFM1)
+```
+
+```{r}
+tweetDFM2 <- dfm_remove(tweetDFM1, c("amp", "der", "us", "de"))
+tweetDFM2
+```
+
+```{r}
+topDFM2 <- topfeatures(tweetDFM2)
+topDFM2
+```
+
+```{r}
+# rownames(infldf)
+infldf$words <- rownames(infldf)
+infldf
+```
+
+
+```{r}
+ggplot(infldf, aes(words, topDFM2)) + geom_bar(stat = "identity") + geom_smooth() + labs(title = "Most Repeated Words in Inflation Tweets", x= "Words", y= "Repetition")
+```
+
+
+```{r}
+allBidenflation <- sum(str_detect(infl1$text,regex("bidenflation",ignore_case = TRUE))) #regex means Regular Expression
+cat("Tweets that mention Bidenflation:",allBidenflation,"\n")
+```
+
+```{r}
+allBitcoin <- sum(str_detect(infl1$text,regex("bitcoin",ignore_case = TRUE))) #regex means Regular Expression
+cat("Tweets that mention Bitcoin:",allBitcoin,"\n")
+```
+
+```{r}
+ggplot(infl1, aes(created_at, quoted_favorite_count)) + geom_point() +geom_smooth() + labs(title = "Favorited tweets vs. Time of Creation", x="Time of Creation of Tweets", y="Favorite Tweets")
+```
+
+```{r}
+ggplot(infl1, aes(quoted_retweet_count, quoted_favorite_count)) + geom_point() + geom_smooth() + labs(title = "Favorited Tweets vs. Retweets", x= "Retweets", y= "Favorite Tweets")
+```
+
+#Association Rules
+```{r}
+install.packages("arules")
+install.packages("arulesViz")
+```
+
+```{r}
+library(tidyverse)
+library(arules)
+library(arulesViz)
+```
+#Import Data as transactions
+```{r}
+Tweets5 <- read.transactions("infl6.csv", rm.duplicates = FALSE, format = "basket", sep = ",")
+Tweets5
+```
+
+Plot item Frequency
+```{r}
+itemFrequencyPlot(Tweets5, topN=30)
+```
+
+# Apriori 
+```{r}
+# Minimum support of 1% & Minimum confidence of 50%
+rules <- apriori(Tweets5, parameter = list(support = 0.01, confidence = 0.5))
+inspect(rules)
+```
+
+
+```{r}
+plot(rules)
+```
+
+Top Confidence Rules
+```{r}
+# Extract top 5 rules
+top30Confidence <- head(sort(rules, by= "confidence", decreasing = TRUE), 30)
+inspect(top30Confidence)
+```
+
+Visualize top 5 Rules
+```{r}
+plot(top30Confidence, method = "graph")
+```
+
+Visualize top 5 Rules
+```{r}
+plot(top30Confidence, method = "graph")
+```
+
+
+```{r}
+library(readr)
+infl <- read_csv("~/Desktop/STU 21:22 MASTER/ANALYTICS/PROGRAMING /final proyect /infl.csv")
+View(infl)
+stringAsFactors=TRUE
+```
+# Load Libraries and Install Packages 
+```{r}
+# install packages 
+install.packages("tidyverse")
+install.packages("caTools")
+install.packages("caret")
+install.packages("e1071")
+install.packages("party")
+install.packages("readr")
+```
+
+
+#Models
+```{r}
+#install libraries 
+library(tidyverse)
+library(caTools)
+library(caret)
+library(e1071)
+library(party)
+library(readr)
+require(caTools)
+```
+```{r}
+infl$is_retweet<-ifelse(infl$is_retweet== TRUE, 1, 0)
+```
+```{r}
+newdata<- subset (infl(is_retweet, is_quote, followers_count, text, location))
+```
+
+# LOGISTIC REGRESSION 
+```{r}
+# question:Build a logistic regression model that classifies if people who talk about inflation based on the number of rt and their followers (usar columna de rt)
+lgModel<- glm(formula= is_retweet ~ text + followers_count, data= infl)
+```
+
+
+```{r}
+## What are the accuracy, precision, and recall for your model?
+
+pred<-predict(lgModel, new.medical, type= "response")
+print(pred)
+```
+
+# DECISION TREES
+
+```{r}
+#set Seed
+set.seed(321)
+#split the data
+sample <-sample.split(infl$text, SplitRatio = .6)
+train<- subset(infl, sample== TRUE)
+test<-subset (infl, sample== FALSE)
+```
+```{r}
+### Build ctree
+ctreemodel<-ctree (text ~ is_retweet + followers_count, data= infl)
+plot( ctreemodel)
+```
+```{r}
+#predict CTree 
+#response is to give you a class
+pred.Ctree<-predict(ctreemodel, newdata= test, type= "response")
+print(pred.Ctree)
+#matrix just to see how well was the prediction and to organize our prediction 
+ctree.Matrix<- table(test$text, pred.Ctree, dnn = c("Actual", "Prediction"))
+print(ctree.Matrix)
+```
+```{r}
+#diag is the diagonal of a Matrix 
+accuracy<- sum(diag(ctree.Matrix)/ sum (ctree.Matrix))
+print(accuracy) 
+```
+# decsion tree cart model 
+```{r}
+#create CART
+carttreemodel<- rpart(text~ is_retweet + followers_count, data=train)
+print(carttreemodel)
+```
+```{r}
+#visualize the tree "extra" display extra information 
+#"Under" display the info below 
+rpart.plot(carttreemodel, extra= 2, under = TRUE)
+```
+
+```{r}
+#Predict Cart (in cart you need type= "class")
+pred.cart<- predict(carttreemodel, newdata=test, type= "class")
+cart.matrix<-table (test$text, pred.cart, dnn= c("Actual", "Prediction"))
+print( cart.matrix)
+
+#Accuracy
+accuracy<- sum(diag(cart.matrix)/ sum (cart.matrix))
+print(accuracy)  
+```
+
+# NAIVE BAYES 
+
+```{r}
+set.seed(123)
+
+sample = sample.split(infl$text, SplitRatio = .75)
+train = subset(infl, sample == TRUE)
+test = subset(infl, sample == FALSE)
+```
+```{r}
+# Build Model
+nb_model <- naiveBayes(text~ is_retweet + followers_count, data = train)
+nb_model
+```
+```{r}
+# Predict the Class
+nb_prediction <- predict(nb_model,test, type = "class")
+
+# Confusion Matrix
+table(test$Rating, nb_prediction, dnn = c("Actual","Prediction"))
+
+# Output results
+data.frame(test, Prediction = nb_prediction)
+```
+
+
+```{r}
+# Predict the probabilities
+nb_prediction_prob <- predict(nb_model,test,type = "raw")
+
+results_prob <- data.frame(Actual = test$Rating, 
+                           PredictionClass = nb_prediction, 
+                           Prediction = nb_prediction_prob)
+results_prob
+```
+
+```{r}
+# Accuracy = (TP+ TN)/(TP+TN+FP+FN)
+tpTN <- nrow(subset(results_prob,Actual == PredictionClass))
+
+testSize <- nrow(test)
+
+accuracy <- tpTN/testSize
+cat("Naive Bayes Classifier Accuracy:", accuracy)
+```
+##  LaPlace Smoothing
+laplace parameter adds a positive intregrer value (that we choose) to every class to remove zeros in the probability calculation.
+```{r}
+# Build Naive Bayes with LaPlace
+laplace_model <- naiveBayes(text~., data = train, laplace = 1)
+laplace_prediction <- predict(laplace_model, test, type = "class")
+
+# Calculate Accuracy
+laplace_results <- data.frame(Actual = test$Rating, Prediction = laplace_prediction)
+accurateRows <- nrow(subset(laplace_results, Actual == Prediction))
+
+accuracy <- accurateRows/nrow(test)
+accuracy
