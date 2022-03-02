@@ -1,0 +1,254 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("caTools")
+#install.packages("lubridate")
+#install.packages("class")
+#install.packages("corrplot")
+#install.packages("gmodels")
+#install.packages("Metrics")
+#install.packages("olsrr")
+#install.packages("kernlab")
+```
+
+```{r}
+library(tidyverse)
+library(caTools)
+library(lubridate)
+library(class)
+library(corrplot)
+library(gmodels)
+library(Metrics)
+library(olsrr)
+```
+```{r}
+library(kernlab)
+```
+
+
+# Digital Ad Campaigns Analysis
+## Load Data
+```{r}
+Ads <- read.csv("KAG_conversion_data.csv", stringsAsFactors = TRUE)
+glimpse(Ads)
+```
+
+## Database Summary
+```{r}
+summary(Ads$Total_Conversion)
+```
+```{r}
+summary(Ads$Approved_Conversion)
+```
+
+## Preparing Data for Analysis
+```{r}
+Ads$Conversion_Class <- as.factor( ifelse(Ads$Total_Conversion <= 1.000, "low",
+                                         ifelse(Ads$Total_Conversion <= 2.856, "low-Mid",
+                                                ifelse(Ads$Total_Conversion <= 3.000, "Mid-High",
+                                                       "High"))))
+glimpse(Ads)
+```
+## Linear Model
+
+```{r}
+set.seed (123)
+
+sample <- sample.split(Ads$Total_Conversion, SplitRatio = 0.75)
+train <- subset(Ads, sample == TRUE)
+test <- subset(Ads, sample == FALSE)
+```
+
+
+```{r}
+lmmodel <- lm(Total_Conversion ~ interest + Impressions + Clicks + Spent, data = train)
+lmprediction <- predict(lmmodel, test)
+rmse(lmprediction, test$Total_Conversion)
+```
+
+### Multivariate Stepwise Linear Regression
+
+```{r}
+stepwiseforward <- ols_step_forward_p(lmmodel, details = FALSE)
+stepwiseforwardPredict <- predict(stepwiseforward$model,test)
+rmse(stepwiseforwardPredict,Ads$Total_Conversion)
+```
+```{r}
+stepwisebackward <- ols_step_backward_p(lmmodel, details = FALSE)
+stepwisebackwardPredict <- predict(stepwisebackward$model,test)
+rmse(stepwisebackwardPredict,Ads$Total_Conversion)
+```
+
+```{r}
+stepwiseboth <- ols_step_both_p(lmmodel, details = FALSE)
+stepwisebothPredict <- predict(stepwiseboth$model,test)
+rmse(stepwisebothPredict,Ads$Total_Conversion)
+```
+
+```{r}
+stepwiseModelforward <- ols_step_forward_p(lmmodel, details = FALSE)
+stepwiseforwardPrediction <- predict(stepwiseModelforward$model,test)
+cat("Stepwise Forward RMSE", rmse(stepwiseforwardPrediction,test$Total_Conversion), "\n")
+
+stepwiseModelbackward <- ols_step_backward_p(lmmodel, details = FALSE)
+stepwisebackwardPrediction <- predict(stepwiseModelbackward$model,test)
+cat("Stepwise Backward RMSE", rmse(stepwisebackwardPrediction,test$Total_Conversion), "\n")
+
+stepwiseModelboth <- ols_step_both_p(lmmodel, details = FALSE)
+stepwisebothPrediction <- predict(stepwiseModelboth$model,test)
+cat("Stepwise Both RMSE", rmse(stepwisebothPrediction,test$Total_Conversion), "\n")
+```
+```{r}
+stepwiseModelboth
+```
+```{r}
+stepwiseModelbackward
+```
+## Plots Visualizations
+
+```{r}
+plot(Ads$Total_Conversion,Ads$Impressions)
+```
+```{r}
+plot(Ads$Total_Conversion,Ads$Spent)
+```
+## KNN Model
+
+```{r}
+set.seed(123)
+sample1 <- sample.split(Ads$Total_Conversion, SplitRatio = .75)
+train1 <- subset(Ads, sample == TRUE)
+test1 <- subset(Ads, sample == FALSE)
+```
+
+```{r}
+impressions.spent.train <- select(train1,Impressions,Spent)
+impressions.spent.test <- select(test1,Impressions,Spent)
+```
+
+```{r}
+predicted.impressions.spentk4 <- knn(train = impressions.spent.train,
+                                 test = impressions.spent.test,
+                                 cl = train$Conversion_Class,
+                                 k = 4)
+```
+
+```{r}
+impressions.spent.confusionk4 <- table(predicted.impressions.spentk4,test$Conversion_Class)
+impressions.spent.confusionk4
+```
+
+```{r}
+accuracyAdsk4 <- sum(diag(impressions.spent.confusionk4)) / sum(impressions.spent.confusionk4)
+cat("Accuracy is:",accuracyAdsk4)
+```
+```{r}
+predicted.impressions.spentk5 <- knn(train = impressions.spent.train,
+                                 test = impressions.spent.test,
+                                 cl = train$Conversion_Class,
+                                 k = 5)
+
+impressions.spent.confusionk5 <- table(predicted.impressions.spentk5,test$Conversion_Class)
+impressions.spent.confusionk5
+```
+
+```{r}
+accuracyAdsk5 <- sum(diag(impressions.spent.confusionk5)) / sum(impressions.spent.confusionk5)
+cat("Accuracy is:",accuracyAdsk5)
+```
+
+```{r}
+predicted.impressions.spentk6 <- knn(train = impressions.spent.train,
+                                 test = impressions.spent.test,
+                                 cl = train$Conversion_Class,
+                                 k = 6)
+
+impressions.spent.confusionk6 <- table(predicted.impressions.spentk6,test$Conversion_Class)
+impressions.spent.confusionk6
+```
+
+```{r}
+accuracyAdsk6 <- sum(diag(impressions.spent.confusionk6)) / sum(impressions.spent.confusionk6)
+cat("Accuracy is:",accuracyAdsk6)
+```
+```{r}
+head(Ads)
+```
+
+```{r}
+# Split samples
+Ads_train <- Ads [1:12000,]
+Ads_valudation <- Ads [12001:16000,]
+Ads_test <- Ads [16001:20000,]
+```
+
+```{r}
+svmwithkernel <- function(kernel) {
+  set.seed(12345)
+  
+  # Build SVM Model
+  kernelmodel <- ksvm(ad_id ~ .,
+                 data = Ads_train,
+                 kernel = kernel)
+  
+  # Predict
+  kernelpredict <- predict(kernelmodel, Ads_test)
+  
+  # Generate Confusuion Matrix
+  kernelconfusionMatrix <- table(kernelpredict,
+                                 Ads_test$ad_id,
+                                 dnn = c("Prediction", "Actual"))
+  
+  # Calculate Accuracy
+  KernelAccuracy <- sum(diag(kernelconfusionMatrix)) / sum(kernelconfusionMatrix)
+  
+  return(KernelAccuracy)
+}
+
+# Generate list of Kernels
+kernels <- c("vanilladot", "rbfdot", "polydot", "tanhdot")
+
+# Calculate Accuracy for each kernel
+accuracy_kernels <- sapply(kernels, svmwithkernel)
+
+kernelsaccuracy <- data.frame(kernels = kernels, Accuracy = accuracy_kernels)
+kernelsaccuracy
+```
+
+```{r}
+svmwithcost <- function(kernel) {
+  set.seed(12345)
+  
+  # Build SVM Model
+  costmodel <- ksvm(ad_id ~ .,
+                 data = Ads_train,
+                 kernel = "rbfdot",
+                 C = cost)
+  
+  # Predict
+  costpredict <- predict(costmodel, Ads_test)
+  
+  # Generate Confusuion Matrix
+  costconfusionMatrix <- table(costpredict,
+                                 Ads_test$ad_id,
+                                 dnn = c("Prediction", "Actual"))
+  
+  # Calculate Accuracy
+  costAccuracy <- sum(diag(costconfusionMatrix)) / sum(costconfusionMatrix)
+  
+  return(costAccuracy)
+}
+
+# Generate list
+cost_values <- c(1, seq(from = 5, to = 40, by = 5))
+
+# Calculate Accuracy for each kernel
+accuracy_values <- sapply(cost_values, svmwithcost)
+
+Cost_Accuracy <- data.frame(cost = cost_values, Accuracy = accuracy_values)
+Cost_Accuracy
+```
